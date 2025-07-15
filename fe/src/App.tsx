@@ -20,9 +20,7 @@ function App() {
 
   useEffect(() => {
     // Connect to WebSocket server
-    const ws = new WebSocket(process.env.NODE_ENV === 'production' 
-      ? "wss://YOUR_BACKEND_URL_HERE" 
-      : "ws://localhost:8080");
+    const ws = new WebSocket(process.env.REACT_APP_WEBSOCKET_URL || "ws://localhost:8080");
     
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
