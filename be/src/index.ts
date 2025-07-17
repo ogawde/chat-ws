@@ -7,12 +7,14 @@ interface User {
   socket: WebSocket;
   room: string;
   userId: string;
+  username: string;
 }
 
 let allSockets: User[] = [];
 
 wss.on("connection", (socket) => {
-  console.log("New client connected");
+  console.log("New client connected",socket);
+  
 
   socket.on("message", (message) => {
     const parsedMessage = JSON.parse(message.toString());
@@ -23,20 +25,23 @@ wss.on("connection", (socket) => {
       allSockets.push({
         socket,
         room: parsedMessage.payload.roomId,
-        userId: parsedMessage.payload.userId
+        userId: parsedMessage.payload.userId,
+        username: parsedMessage.payload.username
       });
       
-      console.log(`User ${parsedMessage.payload.userId} joined room: ${parsedMessage.payload.roomId}`);
+      console.log(`User ${parsedMessage.payload.username} (${parsedMessage.payload.userId}) joined room: ${parsedMessage.payload.roomId}`);
     }
 
     if (parsedMessage.type === "chat") {
       const user = allSockets.find((x) => x.socket === socket);
+      
       if (!user) return;
 
       const currentUserRoom = user.room;
       const messageData = {
         message: parsedMessage.payload.message,
-        userId: parsedMessage.payload.userId
+        userId: parsedMessage.payload.userId,
+        username: parsedMessage.payload.username
       };
 
       allSockets.forEach((x) => {
@@ -45,8 +50,9 @@ wss.on("connection", (socket) => {
         }
       });
 
-      console.log(`Message sent in room ${currentUserRoom}: ${parsedMessage.payload.message}`);
+      console.log(`Message from ${parsedMessage.payload.username} in room ${currentUserRoom}: ${parsedMessage.payload.message}`);
     }
+
   });
 
   socket.on("close", () => {
