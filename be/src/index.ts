@@ -8,6 +8,7 @@ interface User {
   room: string;
   userId: string;
   username: string;
+  avatarId?: string;
 }
 
 let allSockets: User[] = [];
@@ -26,7 +27,8 @@ wss.on("connection", (socket) => {
         socket,
         room: parsedMessage.payload.roomId,
         userId: parsedMessage.payload.userId,
-        username: parsedMessage.payload.username
+        username: parsedMessage.payload.username,
+        avatarId: parsedMessage.payload.avatarId,
       });
       
       console.log(`User ${parsedMessage.payload.username} (${parsedMessage.payload.userId}) joined room: ${parsedMessage.payload.roomId}`);
@@ -41,7 +43,8 @@ wss.on("connection", (socket) => {
       const messageData = {
         message: parsedMessage.payload.message,
         userId: parsedMessage.payload.userId,
-        username: parsedMessage.payload.username
+        username: parsedMessage.payload.username,
+        avatarId: user.avatarId,
       };
 
       allSockets.forEach((x) => {

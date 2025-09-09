@@ -9,5 +9,6 @@ export interface Message {
   text: string;
   isOwn: boolean;
   username: string;
+  avatarId?: string;
 }
 

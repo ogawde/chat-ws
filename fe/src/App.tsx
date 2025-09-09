@@ -1,17 +1,35 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useWebSocket } from "./hooks/useWebSocket";
 import { RoomSelection } from "./components/RoomSelection";
 import { ChatRoom } from "./components/ChatRoom";
 import type { Message, Room } from "./types";
 import { generateUsername } from "./utils/usernameGenerator";
+import { AvatarProfileModal } from "./components/avatar-profile-modal";
+import { loadUserProfile, saveUserProfile, type UserProfile } from "./lib/avatars";
 
 function App() {
-  const [messages, setMessages] = useState<Message[]>([]);  
-  const [currentMessage, setCurrentMessage] = useState(""); 
-  const [currentRoom, setCurrentRoom] = useState(""); 
-  const [isJoined, setIsJoined] = useState(false); 
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [currentMessage, setCurrentMessage] = useState("");
+  const [currentRoom, setCurrentRoom] = useState("");
+  const [isJoined, setIsJoined] = useState(false);
   const [userId] = useState(() => Math.random().toString(36).substr(2, 9));
-  const [username] = useState(() => generateUsername()); 
+  const [username, setUsername] = useState(() => generateUsername());
+  const [avatarId, setAvatarId] = useState<string | null>(null);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [initialProfile, setInitialProfile] = useState<UserProfile | null>(null);
+
+  useEffect(() => {
+    const storedProfile = loadUserProfile();
+
+    if (storedProfile) {
+      setInitialProfile(storedProfile);
+      setUsername(storedProfile.name);
+      setAvatarId(storedProfile.avatarId);
+      setIsProfileModalOpen(false);
+    } else {
+      setIsProfileModalOpen(true);
+    }
+  }, []);
 
   const rooms: Room[] = [
     { 
@@ -40,25 +58,38 @@ function App() {
     }
   ];
 
-  const handleIncomingMessage = useCallback((data: { message: string; userId: string; username: string }) => {
+  const handleIncomingMessage = useCallback((data: { message: string; userId: string; username: string; avatarId?: string }) => {
     setMessages((prevMessages) => [...prevMessages, {
       text: data.message,
       isOwn: data.userId === userId,
-      username: data.username
+      username: data.username,
+      avatarId: data.avatarId,
     }]);
   }, [userId]);
 
   const wsRef = useWebSocket({ userId, onMessage: handleIncomingMessage });
 
+  const handleProfileSave = (profile: UserProfile) => {
+    setUsername(profile.name);
+    setAvatarId(profile.avatarId);
+    saveUserProfile(profile);
+    setInitialProfile(profile);
+    setIsProfileModalOpen(false);
+  };
+
   const joinRoom = (roomId: string) => {
-    if (!wsRef.current) return;
+    if (!wsRef.current || !avatarId || !username.trim()) {
+      setIsProfileModalOpen(true);
+      return;
+    }
 
     const joinMessage = {
       type: "join",
       payload: {
-        roomId: roomId,
-        userId: userId,
-        username: username
+        roomId,
+        userId,
+        username,
+        avatarId,
       }
     };
 
@@ -81,8 +112,9 @@ function App() {
       type: "chat",
       payload: {
         message: currentMessage.trim(),
-        userId: userId,
-        username: username
+        userId,
+        username,
+        avatarId,
       }
     };
 
@@ -94,19 +126,27 @@ function App() {
     return rooms.find(room => room.id === currentRoom);
   };
 
-  if (!isJoined) {
-    return <RoomSelection rooms={rooms} onJoinRoom={joinRoom} />;
-  }
-
   return (
-    <ChatRoom
-      messages={messages}
-      currentMessage={currentMessage}
-      roomInfo={getCurrentRoomInfo()}
-      onMessageChange={setCurrentMessage}
-      onSendMessage={sendMessage}
-      onLeaveRoom={leaveRoom}
-    />
+    <>
+      <AvatarProfileModal
+        isOpen={isProfileModalOpen}
+        initialProfile={initialProfile}
+        fallbackName={username}
+        onSave={handleProfileSave}
+      />
+      {!isJoined ? (
+        <RoomSelection rooms={rooms} onJoinRoom={joinRoom} />
+      ) : (
+        <ChatRoom
+          messages={messages}
+          currentMessage={currentMessage}
+          roomInfo={getCurrentRoomInfo()}
+          onMessageChange={setCurrentMessage}
+          onSendMessage={sendMessage}
+          onLeaveRoom={leaveRoom}
+        />
+      )}
+    </>
   );
 }
 
