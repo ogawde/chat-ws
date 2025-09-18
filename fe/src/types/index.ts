@@ -3,6 +3,7 @@ export interface Room {
   name: string;
   symbol: string;
   color: string;
+  description?: string;
 }
 
 export interface Message {
