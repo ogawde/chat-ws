@@ -4,15 +4,10 @@ import { cn } from "@/lib/utils"
 export interface TopographyBackgroundProps {
   className?: string
   children?: React.ReactNode
-  /** Number of contour lines */
   lineCount?: number
-  /** Line color */
   lineColor?: string
-  /** Background color */
   backgroundColor?: string
-  /** Animation speed */
   speed?: number
-  /** Line thickness */
   strokeWidth?: number
 }
 
@@ -40,7 +35,6 @@ export function TopographyBackground({
     let width = rect.width
     let height = rect.height
 
-    // Higher resolution for crisp lines
     const dpr = window.devicePixelRatio || 1
     canvas.width = width * dpr
     canvas.height = height * dpr
@@ -51,7 +45,6 @@ export function TopographyBackground({
     let animationId: number
     let tick = 0
 
-    // Resize handler
     const handleResize = () => {
       const rect = container.getBoundingClientRect()
       width = rect.width
@@ -77,7 +70,6 @@ export function TopographyBackground({
       )
     }
 
-    // Animation
     const animate = () => {
       tick += 0.008 * speed
 

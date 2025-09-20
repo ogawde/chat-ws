@@ -1,38 +1,40 @@
-import { Button } from "./ui/button";
-import { Textarea } from "./ui/textarea";
+import { cn } from "../lib/utils";
 
 interface ChatInputProps {
   currentMessage: string;
   onMessageChange: (message: string) => void;
   onSendMessage: () => void;
+  accentClass: string;
 }
 
-export const ChatInput = ({ currentMessage, onMessageChange, onSendMessage }: ChatInputProps) => {
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      onSendMessage();
-    }
+export const ChatInput = ({
+  currentMessage,
+  onMessageChange,
+  onSendMessage,
+  accentClass,
+}: ChatInputProps) => {
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!currentMessage.trim()) return;
+    onSendMessage();
   };
 
   return (
-    <div className="bg-gray-900 border-t border-gray-800 p-4">
-      <div className="flex space-x-3">
-        <Textarea
+    <form
+      onSubmit={handleSubmit}
+      className="border-t border-slate-800 bg-slate-950/80 px-4 py-3"
+    >
+      <div className="mx-auto flex max-w-5xl items-center gap-2 font-mono text-sm text-slate-100">
+        <span className={cn("select-none", accentClass)}>$</span>
+        <input
+          type="text"
           value={currentMessage}
-          onChange={(e) => onMessageChange(e.target.value)}
-          onKeyDown={handleKeyPress}
-          placeholder="Start chattin..."
-          className="flex-1 min-h-10 max-h-20 resize-none bg-gray-800 text-white border-gray-700 placeholder-gray-400 focus:border-gray-600 focus:ring-gray-600"
+          onChange={(event) => onMessageChange(event.target.value)}
+          placeholder="type your message..."
+          className="flex-1 bg-transparent text-slate-100 placeholder-slate-500 outline-none"
+          autoFocus
         />
-        <Button
-          onClick={onSendMessage}
-          disabled={!currentMessage.trim()}
-          className="bg-blue-600 hover:bg-blue-500 text-white px-6 border-0 disabled:bg-gray-700 disabled:text-gray-400"
-        >
-          Send
-        </Button>
       </div>
-    </div>
+    </form>
   );
 };

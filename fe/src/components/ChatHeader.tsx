@@ -1,28 +1,32 @@
 import { Button } from "./ui/button";
+import { cn } from "../lib/utils";
 import type { Room } from "../types";
 
 interface ChatHeaderProps {
   roomInfo: Room | undefined;
   onLeaveRoom: () => void;
+  accentClass: string;
 }
 
-export const ChatHeader = ({ roomInfo, onLeaveRoom }: ChatHeaderProps) => {
+export const ChatHeader = ({ roomInfo, onLeaveRoom, accentClass }: ChatHeaderProps) => {
+  const label = roomInfo?.name ?? "Room";
+
   return (
-    <div className="bg-gray-950 border-b border-gray-800 px-6 py-4">
-      <div className="flex justify-between items-center">
-        <div className="flex items-center space-x-3">
-          <div className={`${roomInfo?.color} w-8 h-8 rounded-full flex items-center justify-center`}>
-            <span className="text-white text-lg font-bold">{roomInfo?.symbol}</span>
-          </div>
-          <h1 className="text-xl font-semibold">{roomInfo?.name} Room</h1>
-        </div>
+    <header className="px-4 pt-4">
+      <div className="mx-auto flex max-w-5xl items-center justify-end">
         <Button
           onClick={onLeaveRoom}
-          className="bg-red-600 hover:bg-red-500 text-white border-0"
+          variant="outline"
+          aria-label={`Exit ${label}`}
+          className="flex h-8 w-8 items-center justify-center rounded-full border-slate-700 bg-slate-950/80 p-0 text-slate-100 hover:border-slate-400 hover:bg-slate-900 md:h-9 md:w-9"
         >
-          Leave Room
+          <img
+            src="/exit-svgrepo-com.svg"
+            alt=""
+            className={cn("h-4 w-4 md:h-5 md:w-5 invert", accentClass)}
+          />
         </Button>
       </div>
-    </div>
+    </header>
   );
 };
