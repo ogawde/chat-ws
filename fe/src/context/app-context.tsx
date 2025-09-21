@@ -55,9 +55,6 @@ interface AppContextValue {
   userId: string;
   username: string;
   avatarId: string | null;
-  isProfileModalOpen: boolean;
-  setProfileModalOpen: (open: boolean) => void;
-  initialProfile: UserProfile | null;
   saveProfile: (profile: UserProfile) => void;
   joinRoom: (roomId: string) => boolean;
   leaveRoom: () => void;
@@ -81,8 +78,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [userId] = useState(() => Math.random().toString(36).substr(2, 9));
   const [username, setUsername] = useState(() => generateUsername());
   const [avatarId, setAvatarId] = useState<string | null>(null);
-  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
-  const [initialProfile, setInitialProfile] = useState<UserProfile | null>(null);
 
   const handleIncomingMessage = useCallback(
     (data: { message: string; userId: string; username: string; avatarId?: string }) => {
@@ -104,12 +99,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const stored = loadUserProfile();
     if (stored) {
-      setInitialProfile(stored);
       setUsername(stored.name);
       setAvatarId(stored.avatarId);
-      setIsProfileModalOpen(false);
-    } else {
-      setIsProfileModalOpen(true);
     }
   }, []);
 
@@ -117,16 +108,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setUsername(profile.name);
     setAvatarId(profile.avatarId);
     saveUserProfile(profile);
-    setInitialProfile(profile);
-    setIsProfileModalOpen(false);
   }, []);
 
   const joinRoom = useCallback(
     (roomId: string) => {
-      if (!wsRef.current || !avatarId || !username.trim()) {
-        setIsProfileModalOpen(true);
-        return false;
-      }
+      if (!wsRef.current || !avatarId || !username.trim()) return false;
       const joinMessage = {
         type: "join",
         payload: { roomId, userId, username, avatarId },
@@ -171,9 +157,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     userId,
     username,
     avatarId,
-    isProfileModalOpen,
-    setProfileModalOpen: setIsProfileModalOpen,
-    initialProfile,
     saveProfile,
     joinRoom,
     leaveRoom,

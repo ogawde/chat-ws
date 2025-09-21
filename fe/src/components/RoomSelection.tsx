@@ -7,6 +7,8 @@ import { Switch } from "./ui/switch";
 import { useApp } from "../context/app-context";
 import TextAnimate from "./ui/text-animate";
 import AnimatedTypingMotion from "./shadcn-space/animated-text/animated-text-03";
+import { AVATARS } from "../lib/avatars";
+import { UsernamePrompt } from "./UsernamePrompt";
 
 const ROOM_STYLES: Record<
   string,
@@ -67,11 +69,40 @@ interface RoomSelectionProps {}
 
 export const RoomSelection = (_props: RoomSelectionProps) => {
   const navigate = useNavigate();
-  const { rooms, joinRoom } = useApp();
+  const { rooms, username, avatarId, saveProfile } = useApp();
   const [isDark, setIsDark] = useState(true);
+  const [pendingRoomId, setPendingRoomId] = useState<string | null>(null);
+  const [isUsernamePromptOpen, setIsUsernamePromptOpen] = useState(false);
+
+  const openUsernamePrompt = (roomId: string) => {
+    setPendingRoomId(roomId);
+    setIsUsernamePromptOpen(true);
+  };
+
+  const closeUsernamePrompt = () => {
+    setIsUsernamePromptOpen(false);
+    setPendingRoomId(null);
+  };
 
   const handleJoinRoom = (roomId: string) => {
-    if (joinRoom(roomId)) navigate(`/room/${roomId}`);
+    if (!username.trim() || !avatarId) {
+      openUsernamePrompt(roomId);
+      return;
+    }
+
+    navigate(`/room/${roomId}`);
+  };
+
+  const handleUsernameConfirm = (name: string) => {
+    const randomAvatar = AVATARS[Math.floor(Math.random() * AVATARS.length)];
+    saveProfile({ name, avatarId: randomAvatar.id });
+
+    const targetRoomId = pendingRoomId;
+    closeUsernamePrompt();
+
+    if (!targetRoomId) return;
+
+    navigate(`/room/${targetRoomId}`);
   };
 
   const backgroundColor = isDark ? "#020617" : "#f9fafb";
@@ -90,6 +121,12 @@ export const RoomSelection = (_props: RoomSelectionProps) => {
           isDark ? "text-white" : "text-slate-900",
         )}
       >
+        <UsernamePrompt
+          isOpen={isUsernamePromptOpen}
+          initialName={username}
+          onConfirm={handleUsernameConfirm}
+        />
+
         <div className="w-full max-w-5xl mx-auto">
           <div className="fixed right-6 top-6 z-20 flex items-center gap-2 text-xs md:text-sm">
             <span
