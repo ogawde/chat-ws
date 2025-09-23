@@ -12,6 +12,8 @@ export function RoomPage() {
     messages,
     currentMessage,
     setCurrentMessage,
+    username,
+    avatarId,
     joinRoom,
     leaveRoom,
     sendMessage,
@@ -25,8 +27,14 @@ export function RoomPage() {
       navigate("/", { replace: true });
       return;
     }
+
+    if (!username.trim() || !avatarId) {
+      navigate(`/?room=${roomId}`, { replace: true });
+      return;
+    }
+
     joinRoom(roomId);
-  }, [roomId, navigate, joinRoom]);
+  }, [roomId, username, avatarId, navigate, joinRoom]);
 
   if (!roomId || !roomInfo) return null;
 

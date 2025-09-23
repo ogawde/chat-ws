@@ -1,29 +1,40 @@
 import { useEffect, useRef } from "react";
 
-interface UseWebSocketProps {
+interface ChatMessagePayload {
+  message: string;
   userId: string;
-  onMessage: (data: { message: string; userId: string; username: string }) => void;
+  username: string;
+  avatarId?: string;
 }
 
-export const useWebSocket = ({ userId, onMessage }: UseWebSocketProps) => {
+type ServerMessage =
+  | { type: "chat"; payload: ChatMessagePayload }
+  | { type: "room-timeout"; payload: { roomId: string } };
+
+interface UseWebSocketProps {
+  userId: string;
+  onMessage: (data: ChatMessagePayload) => void;
+  onRoomTimeout: (roomId: string) => void;
+}
+
+export const useWebSocket = ({ userId, onMessage, onRoomTimeout }: UseWebSocketProps) => {
   const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
     const ws = new WebSocket(import.meta.env.VITE_WEBSOCKET_URL || "ws://localhost:8080");
-    
-    ws.onmessage = (e) => {     
-      const data = JSON.parse(e.data);
-      onMessage(data);
-    };
 
-    ws.onopen = () => {
-    };
+    ws.onmessage = (e) => {
+      const parsed = JSON.parse(e.data) as ServerMessage | ChatMessagePayload;
 
-    ws.onclose = () => {
-    };
-
-    ws.onerror = (error) => {
-      console.error("WebSocket error:", error);
+      if ("type" in parsed) {
+        if (parsed.type === "chat") {
+          onMessage(parsed.payload);
+        } else if (parsed.type === "room-timeout") {
+          onRoomTimeout(parsed.payload.roomId);
+        }
+      } else {
+        onMessage(parsed as ChatMessagePayload);
+      }
     };
 
     wsRef.current = ws;
@@ -31,7 +42,7 @@ export const useWebSocket = ({ userId, onMessage }: UseWebSocketProps) => {
     return () => {
       ws.close();
     };
-  }, [userId, onMessage]);
+  }, [userId, onMessage, onRoomTimeout]);
 
   return wsRef;
 };

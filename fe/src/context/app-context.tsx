@@ -94,7 +94,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [userId]
   );
 
-  const wsRef = useWebSocket({ userId, onMessage: handleIncomingMessage });
+  const wsRef = useWebSocket({
+    userId,
+    onMessage: handleIncomingMessage,
+    onRoomTimeout: () => {
+      setMessages([]);
+      navigate("/", { replace: true });
+    },
+  });
 
   useEffect(() => {
     const stored = loadUserProfile();

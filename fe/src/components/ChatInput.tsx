@@ -1,4 +1,7 @@
 import { cn } from "../lib/utils";
+import { toast } from "sonner";
+
+const MAX_MESSAGE_LENGTH = 256;
 
 interface ChatInputProps {
   currentMessage: string;
@@ -15,6 +18,10 @@ export const ChatInput = ({
 }: ChatInputProps) => {
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
+    if (currentMessage.length > MAX_MESSAGE_LENGTH) {
+      toast.error(`Message is too long. Keep it under ${MAX_MESSAGE_LENGTH} characters.`);
+      return;
+    }
     if (!currentMessage.trim()) return;
     onSendMessage();
   };
