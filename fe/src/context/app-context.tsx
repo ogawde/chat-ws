@@ -63,6 +63,21 @@ interface AppContextValue {
   wsRef: React.MutableRefObject<WebSocket | null>;
 }
 
+type OutgoingMessage =
+  | {
+      type: "join";
+      payload: { roomId: string; userId: string; username: string; avatarId: string };
+    }
+  | {
+      type: "chat";
+      payload: {
+        message: string;
+        userId: string;
+        username: string;
+        avatarId: string | null;
+      };
+    };
+
 const AppContext = createContext<AppContextValue | null>(null);
 
 export function useApp() {
@@ -94,13 +109,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [userId]
   );
 
+  const handleRoomTimeout = useCallback(() => {
+    setMessages([]);
+    navigate("/", { replace: true });
+  }, [navigate]);
+
   const wsRef = useWebSocket({
     userId,
     onMessage: handleIncomingMessage,
-    onRoomTimeout: () => {
-      setMessages([]);
-      navigate("/", { replace: true });
-    },
+    onRoomTimeout: handleRoomTimeout,
   });
 
   useEffect(() => {
@@ -117,6 +134,31 @@ export function AppProvider({ children }: { children: ReactNode }) {
     saveUserProfile(profile);
   }, []);
 
+  const sendOverSocket = useCallback(
+    (message: OutgoingMessage) => {
+      const ws = wsRef.current;
+      if (!ws) return false;
+
+      const payload = JSON.stringify(message);
+
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(payload);
+        return true;
+      }
+
+      if (ws.readyState === WebSocket.CONNECTING) {
+        const handleOpen = () => {
+          ws.send(payload);
+        };
+        ws.addEventListener("open", handleOpen, { once: true });
+        return true;
+      }
+
+      return false;
+    },
+    [wsRef]
+  );
+
   const joinRoom = useCallback(
     (roomId: string) => {
       if (!wsRef.current || !avatarId || !username.trim()) return false;
@@ -124,11 +166,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
         type: "join",
         payload: { roomId, userId, username, avatarId },
       };
-      wsRef.current.send(JSON.stringify(joinMessage));
+      const didSend = sendOverSocket(joinMessage as OutgoingMessage);
+      if (!didSend) return false;
       setMessages([]);
       return true;
     },
-    [wsRef, avatarId, username, userId]
+    [wsRef, avatarId, username, userId, sendOverSocket]
   );
 
   const leaveRoom = useCallback(() => {
@@ -147,9 +190,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         avatarId,
       },
     };
-    wsRef.current.send(JSON.stringify(chatMessage));
+    const didSend = sendOverSocket(chatMessage as OutgoingMessage);
+    if (!didSend) return;
     setCurrentMessage("");
-  }, [currentMessage, wsRef, userId, username, avatarId]);
+  }, [currentMessage, wsRef, userId, username, avatarId, sendOverSocket]);
 
   const getRoomInfo = useCallback(
     (roomId: string) => ROOMS.find((r) => r.id === roomId),
