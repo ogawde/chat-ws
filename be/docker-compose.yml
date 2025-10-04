@@ -1,0 +1,13 @@
+services:
+  chat-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: chat-backend
+    restart: unless-stopped
+    environment:
+      PORT: "8080"
+      # Optional hardening in prod:
+      # ALLOWED_ORIGINS: "https://chat.curr.xyz"
+    ports:
+      - "8080:8080"
