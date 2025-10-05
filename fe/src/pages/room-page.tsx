@@ -18,6 +18,7 @@ export function RoomPage() {
     leaveRoom,
     sendMessage,
     getRoomInfo,
+    isSocketReady,
   } = useApp();
 
   const roomInfo = roomId ? getRoomInfo(roomId) : undefined;
@@ -34,7 +35,7 @@ export function RoomPage() {
     }
 
     joinRoom(roomId);
-  }, [roomId, username, avatarId, navigate, joinRoom]);
+  }, [roomId, username, avatarId, navigate, joinRoom, isSocketReady]);
 
   if (!roomId || !roomInfo) return null;
 

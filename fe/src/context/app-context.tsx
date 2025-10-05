@@ -3,6 +3,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -61,6 +62,8 @@ interface AppContextValue {
   sendMessage: () => void;
   getRoomInfo: (roomId: string) => Room | undefined;
   wsRef: React.MutableRefObject<WebSocket | null>;
+  /** True when WebSocket is OPEN (safe to rely on for join retries). */
+  isSocketReady: boolean;
 }
 
 type OutgoingMessage =
@@ -94,6 +97,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [username, setUsername] = useState(() => generateUsername());
   const [avatarId, setAvatarId] = useState<string | null>(null);
 
+  const lastJoinRef = useRef<{
+    roomId: string;
+    userId: string;
+    username: string;
+    avatarId: string;
+  } | null>(null);
+
   const handleIncomingMessage = useCallback(
     (data: { message: string; userId: string; username: string; avatarId?: string }) => {
       setMessages((prev) => [
@@ -110,14 +120,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
 
   const handleRoomTimeout = useCallback(() => {
+    lastJoinRef.current = null;
     setMessages([]);
     navigate("/", { replace: true });
   }, [navigate]);
 
-  const wsRef = useWebSocket({
+  const handleSocketOpen = useCallback((socket: WebSocket) => {
+    const payload = lastJoinRef.current;
+    if (!payload || socket.readyState !== WebSocket.OPEN) return;
+    socket.send(JSON.stringify({ type: "join", payload }));
+  }, []);
+
+  const { wsRef, isSocketReady } = useWebSocket({
     userId,
     onMessage: handleIncomingMessage,
     onRoomTimeout: handleRoomTimeout,
+    onSocketOpen: handleSocketOpen,
   });
 
   useEffect(() => {
@@ -134,6 +152,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     saveUserProfile(profile);
   }, []);
 
+  /**
+   * Sends immediately when socket is open, otherwise queues for next open event.
+   */
   const sendOverSocket = useCallback(
     (message: OutgoingMessage) => {
       const ws = wsRef.current;
@@ -162,19 +183,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const joinRoom = useCallback(
     (roomId: string) => {
       if (!wsRef.current || !avatarId || !username.trim()) return false;
-      const joinMessage = {
-        type: "join",
-        payload: { roomId, userId, username, avatarId },
-      };
-      const didSend = sendOverSocket(joinMessage as OutgoingMessage);
-      if (!didSend) return false;
+      const payload = { roomId, userId, username, avatarId };
+      lastJoinRef.current = payload;
       setMessages([]);
-      return true;
+
+      const ws = wsRef.current;
+      const frame = JSON.stringify({ type: "join", payload });
+
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(frame);
+        return true;
+      }
+      if (ws.readyState === WebSocket.CONNECTING) {
+        return true;
+      }
+
+      lastJoinRef.current = null;
+      return false;
     },
-    [wsRef, avatarId, username, userId, sendOverSocket]
+    [wsRef, avatarId, username, userId]
   );
 
   const leaveRoom = useCallback(() => {
+    lastJoinRef.current = null;
     setMessages([]);
     navigate("/");
   }, [navigate]);
@@ -214,6 +245,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     sendMessage,
     getRoomInfo,
     wsRef,
+    isSocketReady,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
